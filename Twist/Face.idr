@@ -12,6 +12,9 @@ import Twist.Util
 data Face : (n : Nat) -> Type where
   F : Fin (S k) -> Face (S k)
 
+Uninhabited (Face Z) where
+  uninhabited (F SZ) impossible
+
 Eq (Face n) where
   (F j) == (F k) = j == k
 

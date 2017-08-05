@@ -12,11 +12,11 @@ import Twist.Util
 data Cycle : (n : Nat) -> Type where
   By : Fin (S k) -> Cycle (S k)
 
+Uninhabited (Cycle Z) where
+  uninhabited (By SZ) impossible
+
 Eq (Cycle n) where
   (By x) == (By y) = x == y
-
-cycleZAbsurd : Cycle Z -> Void
-cycleZAbsurd (By Z) impossible
 
 DecEq (Cycle n) where
   decEq (By x) (By y) with (decEq x y)
