@@ -6,6 +6,7 @@ import Data.Vect
 
 import Twist.Cycle
 import Twist.Face
+import Twist.Move
 import Twist.Rotation
 import Twist.Util
 
