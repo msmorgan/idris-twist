@@ -7,7 +7,4 @@ import Data.Vect
 %access export
 
 
-getAt : {n : Nat} -> Fin (S n) -> Vect (S n) a -> a
-getAt {n=_} FZ (x :: _)          = x
-getAt {n=(S k)} (FS j) (_ :: xs) = getAt j xs
 

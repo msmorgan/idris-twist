@@ -3,8 +3,6 @@ module Twist.Face
 import Data.Vect
 import Data.Fin
 
-import Twist.Util
-
 
 %default total
 %access export
@@ -32,7 +30,7 @@ showFace_debug : Face n -> String
 showFace_debug (Side k) = "[" ++ show (finToNat k) ++ "]"
 
 showFace_6 : Face 6 -> String
-showFace_6 (Side k) = getAt k ["Side", "R", "U", "B", "L", "D"]
+showFace_6 (Side k) = index k ["Side", "R", "U", "B", "L", "D"]
 
 showFace : {n : Nat} -> Face n -> String
 showFace {n=(S (S (S (S (S (S Z))))))} f = showFace_6 f

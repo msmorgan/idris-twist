@@ -4,8 +4,6 @@ import Control.Algebra
 import Data.Fin
 import Data.Vect
 
-import Twist.Util
-
 %default total
 %access export
 
@@ -28,7 +26,7 @@ showCycle_debug {n=Z} _ impossible
 showCycle_debug {n=n@(S k)} (By x) = show (finToNat x) ++ "/" ++ show n
 
 showCycle_4 : Cycle 4 -> String
-showCycle_4 (By x) = getAt x ["0", "", "2", "'"]
+showCycle_4 (By x) = index x ["0", "", "2", "'"]
 
 showCycle : {n : Nat} -> Cycle n -> String
 showCycle {n=Z} _                 impossible
