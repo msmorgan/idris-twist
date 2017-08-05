@@ -13,8 +13,32 @@ import Twist.Util
 data Rotation : (f : Type) -> (c : Type) -> (face : f) -> Type where
   Rot : (face : (Face (S k))) -> (c : Cycle (S j)) -> Rotation (Face (S k)) (Cycle (S j)) face
 
-Eq c => Eq (Rotation f c face) where
+Eq (Rotation f c face) where
   (Rot face cx) == (Rot face cy) = cx == cy
+
+-- the face types are implied by the faces being equal
+compat : Rotation f c x -> Rotation g d y -> {auto f_EQ_g : f = g} -> {auto c_EQ_d : c = d} -> Bool
+compat (Rot x cx) (Rot y cy) {f_EQ_g=Refl} {c_EQ_d=Refl} = x == y
+compat _ _ {f_EQ_g=_} {c_EQ_d=_}                         = False
+
+--sameRotType : (r : Rotation f c x) -> (s : Rotation g d y) -> {auto p : compat r s = True} -> Rotation f c x = Rotation g d y
+--sameRotType r s {p=Refl} = Refl
+--sameRotType _ _ {p=_} impossible
+
+-- compat' : Rotation f c x ->
+--           Rotation g d y ->
+--           {auto f_EQ_g : f = g} ->
+--           {auto c_EQ_d : c = d} ->
+--           {auto x_EQ_y : x ~=~ y} -> Bool
+-- compat' (Rot x cx) (Rot y cy) {f_EQ_g=Refl} {c_EQ_d=Refl} {x_EQ_y=Refl} = True
+-- compat' _ _ {f_EQ_g=_} {c_EQ_d=_} {x_EQ_y}                              = False
+
+
+equals : Rotation f c x -> Rotation g d y -> {auto f_EQ_g : f = g} -> {auto c_EQ_d : c = d} -> Bool
+equals (Rot x cx) (Rot y cy) {f_EQ_g=Refl} {c_EQ_d=Refl} = x == y && cx == cy
+equals _ _ {f_EQ_g=_} {c_EQ_d=_}                         = False
+
+
 
 Show (Rotation f c face) where
   show (Rot face x) = show face ++ show x
