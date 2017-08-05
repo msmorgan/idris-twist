@@ -105,3 +105,9 @@ Monoid (Cycle (S n)) where
 Group (Cycle (S n)) where
   inverse = invertCycle
 
+degree : Cycle (S n) -> Nat
+degree (By x) = toNat x
+
+degree' : Cycle (S n) -> Nat
+degree' c = degree (inverse c)
+
