@@ -31,8 +31,9 @@ showCycle_4 : Cycle 4 -> String
 showCycle_4 (By x) = getAt x ["0", "", "2", "'"]
 
 showCycle : {n : Nat} -> Cycle n -> String
-showCycle {n=Z} _ impossible
+showCycle {n=Z} _                 impossible
 showCycle {n=(S (S (S (S Z))))} c = showCycle_4 c
+showCycle {n=_}                 c = showCycle_debug c
 
 Show (Cycle n) where
   show = showCycle
