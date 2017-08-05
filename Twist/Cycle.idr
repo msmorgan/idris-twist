@@ -23,14 +23,18 @@ DecEq (Cycle n) where
     | Yes p = Yes $ cong p
     | No p  = let result = No p in ?helpCycle
 
+showCycle_debug : {n : Nat} -> Cycle n -> String
+showCycle_debug {n=Z} _ impossible
+showCycle_debug {n=n@(S k)} (By x) = show (finToNat x) ++ "/" ++ show n
+
+showCycle_4 : Cycle 4 -> String
+showCycle_4 (By x) = getAt x ["0", "", "2", "'"]
+
 showCycle : {n : Nat} -> Cycle n -> String
-showCycle {n=Z}     _      impossible
-showCycle {n=(S k)} (By x) = show (finToNat x) ++ "/" ++ show (S k)
+showCycle {n=Z} _ impossible
+showCycle {n=(S (S (S (S Z))))} c = showCycle_4 c
 
-Show (Cycle 4) where
-  show (By x) = getAt x ["0", "", "2", "'"]
-
-[debug] Show (Cycle n) where
+Show (Cycle n) where
   show = showCycle
 
 ||| Convert from (Cycle n) to (Cycle (S n)), without incrementing its value.

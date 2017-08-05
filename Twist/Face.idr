@@ -18,8 +18,19 @@ Uninhabited (Face Z) where
 Eq (Face n) where
   (F j) == (F k) = j == k
 
-Show (Face 6) where
-  show (F k) = getAt k ["F", "R", "U", "B", "L", "D"]
+showFace_debug : Face n -> String
+showFace_debug (F k) = "[" ++ show (finToNat k) ++ "]"
+
+showFace_6 : Face 6 -> String
+showFace_6 (F k) = getAt k ["F", "R", "U", "B", "L", "D"]
+
+showFace : {n : Nat} -> Face n -> String
+showFace {n=(S (S (S (S (S (S Z))))))} f = showFace_6 f
+showFace {n=_} f = showFace_debug f
+
+Show (Face n) where
+  show = showFace
+
 
 faceZAbsurd : Face Z -> Void
 faceZAbsurd (F Z) impossible

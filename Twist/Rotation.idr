@@ -16,7 +16,7 @@ data Rotation : (f : Type) -> (c : Type) -> (face : f) -> Type where
 Eq c => Eq (Rotation f c face) where
   (Rot face cx) == (Rot face cy) = cx == cy
 
-(Show f, Show c) => Show (Rotation f c face) where
+Show (Rotation f c face) where
   show (Rot face x) = show face ++ show x
 
 cw : (Rotation f c face) -> (Rotation f c face)
