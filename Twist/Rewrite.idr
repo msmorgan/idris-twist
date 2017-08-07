@@ -109,6 +109,12 @@ DecEq (Twist n p) where
 Show (Twist n p) where
   show (Rotate ax x) = show ax ++ show (toNat x)
 
+||| Combine two twists if possible.
+combine : (tx : Twist n p) -> (ty : Twist n p) -> Maybe (Twist n p)
+combine (Rotate ax x) (Rotate ay y) with (decEq ax ay)
+  combine (Rotate ax x) (Rotate ax y) | Yes Refl = Just (Rotate ax (x <+> y))
+  combine (Rotate ax x) (Rotate ay y) | No _     = Nothing
+
 
 twist : (axis : Axis n p) -> Twist n p
 twist axis = Rotate axis (next FZ)
@@ -149,15 +155,15 @@ reverse xxs = reverse' Nil xxs where
   reverse' acc Nil = acc
   reverse' acc (x :: xs) = reverse' (x :: acc) xs
 
-combine : Twist n p -> Twist n p -> MoveList n p
-combine (Rotate ax x) (Rotate ay y) with (decEq ax ay)
-  combine (Rotate ax x) (Rotate ax y) | Yes Refl = Rotate ax (x <+> y) :: Nil
-  combine (Rotate ax x) (Rotate ay y) | No _     = (Rotate ay y) :: (Rotate ax x) :: Nil
-
 simplify : MoveList n p -> MoveList n p
-simplify Nil             = Nil
-simplify (x :: Nil)      = x :: Nil
-simplify (x :: y :: xs)  = (simplify xs) ++ combine y x
+simplify Nil                 = Nil
+simplify xs@(_ :: Nil)       = xs
+simplify (Rotate _ FZ :: xs) = simplify xs
+simplify (x :: y :: xs)      = case combine y x of
+                                    Just xy => simplify $ assert_smaller (x :: y :: xs) (xy :: xs)
+                                    Nothing => x :: simplify (y :: xs)
+
+
 
 Semigroup (MoveList n p) where
   xs <+> ys = simplify $ ys ++ xs
@@ -167,7 +173,7 @@ Monoid (MoveList n p) where
 
 inverseEach : MoveList n p -> MoveList n p
 inverseEach Nil       = Nil
-inverseEach ((Rotate ax x) :: xs) = Rotate ax (inverse x) :: xs
+inverseEach ((Rotate ax x) :: xs) = Rotate ax (inverse x) :: inverseEach xs
 
 Group (MoveList n p) where
   inverse xs = inverseEach $ reverse xs
@@ -182,7 +188,7 @@ CubeMoveList : Type
 CubeMoveList = MoveList (pred 6) CubeFace
 
 rur_u_ : CubeMoveList
-rur_u_ = commutator (twist F :: Nil) (twist R :: Nil)
+rur_u_ = commutator (twist R :: Nil) (twist U :: Nil)
 
 
 --CubeAxis : Type

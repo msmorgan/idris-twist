@@ -29,7 +29,8 @@ prev x = demote' (promote x)
 
 Semigroup (Fin (S k)) where
   (<+>) FZ y        = y
-  (<+>) {k=S _} (FS x') y = promote' (x' <+> (demote y))
+  (<+>) {k=S _} (FS FZ) y = next y
+  (<+>) {k=S _} (FS x') y = promote (x' <+> demote y)
 
 Monoid (Fin (S k)) where
   neutral = FZ <+> FZ
