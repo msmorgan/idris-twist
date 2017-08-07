@@ -16,10 +16,6 @@ Uninhabited (Cycle Z) where
 Eq (Cycle n) where
   (By x) == (By y) = x == y
 
-equals : (Cycle m) -> (Cycle n) -> {auto p : m = n} -> Bool
-equals x y {p=Refl} = x == y
-equals _ _ {p=_}    = False
-
 DecEq (Cycle n) where
   decEq (By x) (By y) with (decEq x y)
     | Yes p = Yes $ cong p

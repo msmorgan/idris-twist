@@ -19,7 +19,6 @@ Face' = Face 6
 Rotation' : Face' -> Type
 Rotation' = Rotation Face' (Cycle 4)
 
-
 data MoveSeq : Type where
   Nil : MoveSeq
   (::) : Rotation' f -> MoveSeq -> MoveSeq
