@@ -22,19 +22,48 @@ SideFunc n = Fin (S n) -> Nat
 data Axis : (n : Nat) -> (p : SideFunc n) -> Type where
   Ax : (face : Fin (S n)) -> Axis n p
 
--- DecEq (Axis n p) where
---   decEq (Ax x) (Ax y) with (decEq x y)
---     decEq (Ax x) (Ax x) | Yes Refl = Yes Refl
---     decEq _ _           | No contra = No $ absurd contra
-
-getDof : Axis n p -> Nat
-getDof (Ax face) = p face
+showAxis_debug : (axis : Axis n p) -> String
+showAxis_debug (Ax f) = "[" ++ show (toNat f) ++ "]"
 
 CubeFace : Fin 6 -> Nat
 CubeFace n = pred 4 --4 sides
 
 CubeAxis : Type
 CubeAxis = Axis (pred 6) CubeFace
+
+showAxis_cube : (axis : Axis (pred 6) p) -> String
+showAxis_cube (Ax FZ) = "F"
+showAxis_cube (Ax (FS FZ)) = "R"
+showAxis_cube (Ax (FS (FS FZ))) = "U"
+showAxis_cube (Ax (FS (FS (FS FZ)))) = "B"
+showAxis_cube (Ax (FS (FS (FS (FS FZ))))) = "L"
+showAxis_cube (Ax (FS (FS (FS (FS (FS FZ)))))) = "D"
+
+showAxis : (x : Axis n p) -> String
+showAxis {n} x = case n of
+                      (S (S (S (S (S Z))))) => showAxis_cube x
+                      _                     => showAxis_debug x
+
+Show (Axis n p) where
+  show = showAxis
+
+
+Eq (Axis n p) where
+  (Ax x) == (Ax y) = x == y
+
+axInjective : {x : Fin (S n)} -> {y : Fin (S n)} -> (Ax x = Ax y) -> x = y
+axInjective Refl = Refl
+
+DecEq (Axis n p) where
+  decEq (Ax x) (Ax y) with (decEq x y)
+    decEq (Ax x) (Ax x) | Yes Refl  = Yes Refl
+    decEq (Ax x) (Ax y) | No contra = No (\h : Ax x = Ax y => contra $ axInjective h)
+
+dof : Axis n p -> Nat
+dof (Ax face) = p face
+
+axDofEq : {ax : Axis n p} -> {ay : Axis n p} -> (ax = ay) -> ((dof ax) = (dof ay))
+axDofEq Refl = Refl
 
 F : Axis (pred 6) CubeFace
 F = Ax 0
@@ -54,25 +83,65 @@ L = Ax 4
 D : Axis (pred 6) CubeFace
 D = Ax 5
 
-data Rotation : (axis : Axis n p) -> Type where
-  Rot : (amount : Fin (S (getDof axis))) -> Rotation axis
+data Twist : (n : Nat) -> (p : SideFunc n) -> Type where
+  Rotate : (axis : Axis n p) -> (amount : Fin (S (dof axis))) -> Twist n p
+  -- Orient : (ax : Axis n p) -> (ay : Axis n p) -> Twist n p
 
-Semigroup (Rotation axis) where
-  (Rot x) <+> (Rot y) = Rot (x <+> y)
+Eq (Twist n p) where
+  (==) (Rotate ax x) (Rotate ay y) with (decEq ax ay)
+    (==) (Rotate ax x) (Rotate ax y) | Yes Refl = x == y
+    (==) _ _                         | No _     = False
 
-Monoid (Rotation axis) where
-  neutral = Rot 0
+rotateAxisInjective : (Rotate ax x = Rotate ay y) -> ax = ay
+rotateAxisInjective Refl = Refl
 
-Group (Rotation axis) where
-  inverse (Rot x) = Rot (inverse x)
+rotateAmountInjective : (Rotate ax x = Rotate ay y) -> x = y
+rotateAmountInjective Refl = Refl
+
+DecEq (Twist n p) where
+  decEq (Rotate ax x) (Rotate ay y) with (decEq ax ay)
+    decEq (Rotate ax x) (Rotate ay y) | No contra = No (\h : Rotate ax x = Rotate ay y => contra $ rotateAxisInjective h) 
+    decEq (Rotate ax x) (Rotate ax y) | Yes Refl  with (decEq x y)
+      decEq (Rotate ax x) (Rotate ax x) | Yes Refl | Yes Refl  = Yes Refl
+      decEq (Rotate ax x) (Rotate ax y) | Yes Refl | No contra = No (\h : Rotate ax x = Rotate ax y => contra $ rotateAmountInjective h)
+
+
+Show (Twist n p) where
+  show (Rotate ax x) = show ax ++ show (toNat x)
+
+
+twist : (axis : Axis n p) -> Twist n p
+twist axis = Rotate axis (next FZ)
+
+twist' : (axis : Axis n p) -> Twist n p
+twist' axis = Rotate axis (prev FZ)
+
+CubeTwist : Type
+CubeTwist = Twist (pred 6) CubeFace
 
 data MoveList : (n : Nat) -> (p : SideFunc n) -> Type where
   Nil  : MoveList n p
-  (::) : {axis : Axis n p} -> Rotation axis -> MoveList n p -> MoveList n p
+  (::) : Twist n p -> MoveList n p -> MoveList n p
+
+Eq (MoveList n p) where
+  (==) Nil Nil             = True
+  (==) _ Nil               = False
+  (==) Nil _               = False
+  (==) (x :: xs) (y :: ys) with (decEq x y)
+    (==) (x :: xs) (x :: ys) | Yes Refl  = xs == ys
+    (==) (x :: xs) (y :: ys) | No contra = False
+
+Show (MoveList n p) where
+  show Nil        = ""
+  show (x :: Nil) = show x
+  show (x :: xs)  = show xs ++ " " ++ show x
 
 (++) : MoveList n p -> MoveList n p -> MoveList n p
 (++) Nil ys = ys
 (++) (x :: xs) ys = x :: (xs ++ ys)
+
+move : Twist n p -> MoveList n p
+move x = x :: Nil
 
 reverse : MoveList n p -> MoveList n p
 reverse xxs = reverse' Nil xxs where
@@ -80,25 +149,40 @@ reverse xxs = reverse' Nil xxs where
   reverse' acc Nil = acc
   reverse' acc (x :: xs) = reverse' (x :: acc) xs
 
+combine : Twist n p -> Twist n p -> MoveList n p
+combine (Rotate ax x) (Rotate ay y) with (decEq ax ay)
+  combine (Rotate ax x) (Rotate ax y) | Yes Refl = Rotate ax (x <+> y) :: Nil
+  combine (Rotate ax x) (Rotate ay y) | No _     = (Rotate ay y) :: (Rotate ax x) :: Nil
+
+simplify : MoveList n p -> MoveList n p
+simplify Nil             = Nil
+simplify (x :: Nil)      = x :: Nil
+simplify (x :: y :: xs)  = (simplify xs) ++ combine y x
 
 Semigroup (MoveList n p) where
-  xs <+> ys = xs ++ (reverse ys)
+  xs <+> ys = simplify $ ys ++ xs
 
 Monoid (MoveList n p) where
   neutral = Nil
 
-inverseMoveList' : MoveList n' p' -> MoveList n' p' -> MoveList n' p'
-inverseMoveList' acc Nil = acc
-inverseMoveList' acc (x :: xs) = inverseMoveList' (inverse x :: acc) xs
+inverseEach : MoveList n p -> MoveList n p
+inverseEach Nil       = Nil
+inverseEach ((Rotate ax x) :: xs) = Rotate ax (inverse x) :: xs
 
 Group (MoveList n p) where
-  inverse xs = inverseMoveList' Nil xs
-  
+  inverse xs = inverseEach $ reverse xs
 
+conjugate : MoveList n p -> MoveList n p -> MoveList n p
+conjugate a b = a <+> b <+> inverse a
 
+commutator : MoveList n p -> MoveList n p -> MoveList n p
+commutator a b = a <+> b <+> inverse a <+> inverse b
 
+CubeMoveList : Type
+CubeMoveList = MoveList (pred 6) CubeFace
 
-
+rur_u_ : CubeMoveList
+rur_u_ = commutator (twist F :: Nil) (twist R :: Nil)
 
 
 --CubeAxis : Type
