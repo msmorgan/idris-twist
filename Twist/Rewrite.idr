@@ -1,4 +1,5 @@
-module Twist.Rewrite
+--module Twist.Rewrite
+module Main
 
 import Control.Algebra
 import Data.Fin
@@ -92,6 +93,9 @@ Eq (Twist n p) where
     (==) (Rotate ax x) (Rotate ax y) | Yes Refl = x == y
     (==) _ _                         | No _     = False
 
+inverse : Twist n p -> Twist n p
+inverse (Rotate ax x) = Rotate ax (inverse x)
+
 rotateAxisInjective : (Rotate ax x = Rotate ay y) -> ax = ay
 rotateAxisInjective Refl = Refl
 
@@ -109,8 +113,10 @@ DecEq (Twist n p) where
 Show (Twist n p) where
   show (Rotate ax x) = show ax ++ show (toNat x)
 
-||| Combine two twists if possible.
+||| Combine two twists if possible. Also eliminates zero twists.
 combine : (tx : Twist n p) -> (ty : Twist n p) -> Maybe (Twist n p)
+combine (Rotate ax FZ) (Rotate ay y) = Just (Rotate ay y)
+combine (Rotate ax x) (Rotate ay FZ) = Just (Rotate ax x)
 combine (Rotate ax x) (Rotate ay y) with (decEq ax ay)
   combine (Rotate ax x) (Rotate ax y) | Yes Refl = Just (Rotate ax (x <+> y))
   combine (Rotate ax x) (Rotate ay y) | No _     = Nothing
@@ -126,54 +132,56 @@ CubeTwist : Type
 CubeTwist = Twist (pred 6) CubeFace
 
 data MoveList : (n : Nat) -> (p : SideFunc n) -> Type where
-  Nil  : MoveList n p
-  (::) : Twist n p -> MoveList n p -> MoveList n p
+  Moves : Vect len (Twist n p) -> MoveList n p
 
 Eq (MoveList n p) where
-  (==) Nil Nil             = True
-  (==) _ Nil               = False
-  (==) Nil _               = False
-  (==) (x :: xs) (y :: ys) with (decEq x y)
-    (==) (x :: xs) (x :: ys) | Yes Refl  = xs == ys
-    (==) (x :: xs) (y :: ys) | No contra = False
+  (Moves xs) == (Moves ys) = (length xs == length ys) && (isPrefixOf xs ys)
 
 Show (MoveList n p) where
-  show Nil        = ""
-  show (x :: Nil) = show x
-  show (x :: xs)  = show xs ++ " " ++ show x
+  show (Moves Nil)           = ""
+  show (Moves xss@(x :: xs)) = foldl (\a, b => a ++ " " ++ b) (show x) $ map show xs
 
 (++) : MoveList n p -> MoveList n p -> MoveList n p
-(++) Nil ys = ys
-(++) (x :: xs) ys = x :: (xs ++ ys)
+(Moves xs) ++ (Moves ys) = Moves (xs ++ ys)
 
 move : Twist n p -> MoveList n p
-move x = x :: Nil
+move x = Moves [x]
 
 reverse : MoveList n p -> MoveList n p
-reverse xxs = reverse' Nil xxs where
-  reverse' : MoveList n p -> MoveList n p -> MoveList n p
-  reverse' acc Nil = acc
-  reverse' acc (x :: xs) = reverse' (x :: acc) xs
+reverse (Moves xs) = Moves (reverse xs)
+
+combineFirstVect : Vect (S k) (Twist n p) -> Either (Vect (S k) (Twist n p)) (Vect k (Twist n p))
+combineFirstVect {k=Z} (x :: Nil) = Left (x :: Nil)
+combineFirstVect {k=S j} (x :: y :: xs) = case combine x y of
+                                               Just xy => Right (xy :: xs)
+                                               Nothing => Left (x :: y :: xs)
+
+-- TODO: somehow prove that len <= k
+simplifyVect : Vect k (Twist n p) -> (len ** Vect len (Twist n p))
+simplifyVect {k=Z} Nil = (Z ** Nil)
+simplifyVect {k=S Z} (x :: Nil) = (S Z ** x :: Nil)
+simplifyVect {k=S Z} (Rotate _ FZ :: Nil) = (Z ** Nil)
+-- simplifyVect {k=S (S j)} xxs = simplifyVect' xxs
+simplifyVect {k=S (S j)} xxs with (combineFirstVect xxs)
+  simplifyVect {k=S (S j)} xxs | Right combined = simplifyVect combined
+  simplifyVect {k=S (S j)} xxs | _              = (S (S j) ** xxs)
+  -- simplifyVect {k=S (S j)} xxs with (simplifyVect' xxs)
+  --   simplifyVect {k=S (S j)} xxs | (l ** xxs') = simplifyVect xxs'
+
+%default partial
 
 simplify : MoveList n p -> MoveList n p
-simplify Nil                 = Nil
-simplify xs@(_ :: Nil)       = xs
-simplify (Rotate _ FZ :: xs) = simplify xs
-simplify (x :: y :: xs)      = case combine y x of
-                                    Just xy => simplify $ assert_smaller (x :: y :: xs) (xy :: xs)
-                                    Nothing => x :: simplify (y :: xs)
-
-
+simplify (Moves xs) = Moves (snd (simplifyVect xs))
 
 Semigroup (MoveList n p) where
-  xs <+> ys = simplify $ ys ++ xs
+  xs <+> ys = simplify $ xs ++ ys
 
 Monoid (MoveList n p) where
-  neutral = Nil
+  neutral = Moves Nil
+
 
 inverseEach : MoveList n p -> MoveList n p
-inverseEach Nil       = Nil
-inverseEach ((Rotate ax x) :: xs) = Rotate ax (inverse x) :: inverseEach xs
+inverseEach (Moves xxs) = Moves (map inverse xxs)
 
 Group (MoveList n p) where
   inverse xs = inverseEach $ reverse xs
@@ -188,14 +196,9 @@ CubeMoveList : Type
 CubeMoveList = MoveList (pred 6) CubeFace
 
 rur_u_ : CubeMoveList
-rur_u_ = commutator (twist R :: Nil) (twist U :: Nil)
+rur_u_ = commutator (move (twist R)) (move (twist U))
 
 
---CubeAxis : Type
---CubeAxis = Axis 6 (const (4 ** Fin 4))
-
--- Front : CubeAxis
--- Front = Ax (FZ ** (4 ** Fin 4))
-
--- data Rotation
+main : IO ()
+main = putStrLn (show (rur_u_ <+> inverse rur_u_))
 
